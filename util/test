@@ -3,7 +3,7 @@
 import sys
 from subprocess import Popen, PIPE
 
-def main(file):
+def main(impl, file):
 	tested = passed = 0
 
 	f = open(file)
@@ -15,16 +15,15 @@ def main(file):
 		elif line.startswith('CT='):
 			ct = line[3:].strip()
 			tested += 1
-			result = aes(key, pt)
+			result = aes(impl, key, pt)
 			if result == ct:
 				passed += 1
 	f.close()
 
 	print("%d/%d TESTS PASSED" % (passed, tested))
 
-
-def aes(key, pt):
-	return Popen(["./aes", key, pt], stdout=PIPE).communicate()[0].strip()
+def aes(impl, key, pt):
+	return Popen([impl, key, pt], stdout=PIPE).communicate()[0].strip()
 
 if __name__ == '__main__':
-	main(sys.argv[1])
+	main(sys.argv[1], sys.argv[2])
