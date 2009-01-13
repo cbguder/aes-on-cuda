@@ -28,7 +28,7 @@
 #ifndef USUAL_TYPES
 #define USUAL_TYPES
 typedef unsigned char   byte;
-//typedef unsigned long   uint;   /* assuming sizeof(uint) == 4 */
+typedef unsigned long   uint;   /* assuming sizeof(uint) == 4 */
 #endif /* USUAL_TYPES */
 
 #ifndef AES_BLOCKBITS

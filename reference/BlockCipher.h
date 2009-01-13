@@ -25,7 +25,7 @@
 #ifndef USUAL_TYPES
 #define USUAL_TYPES
 typedef unsigned char   byte;
-typedef unsigned int   uint;   /* assuming sizeof(uint) == 4 */
+typedef unsigned long   uint;   /* assuming sizeof(uint) == 4 */
 #endif /* USUAL_TYPES */
 
 #define DIR_NONE    0
