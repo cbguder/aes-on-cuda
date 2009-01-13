@@ -35,7 +35,7 @@
 #define PUTWORD(ct, st) (*((uint *)(ct)) = SWAP((st)))
 #else
 #define GETWORD(pt) (((uint)(pt)[0] << 24) ^ ((uint)(pt)[1] << 16) ^ ((uint)(pt)[2] <<  8) ^ ((uint)(pt)[3]))
-#define PUTWORD(ct, st) ((ct)[0] = (byte)((st) >> 24), (ct)[1] = (byte)((st) >> 16), (ct)[2] = (byte)((st) >>  8), (ct)[3] = (byte)(st), (s))
+#define PUTWORD(ct, st) ((ct)[0] = (byte)((st) >> 24), (ct)[1] = (byte)((st) >> 16), (ct)[2] = (byte)((st) >>  8), (ct)[3] = (byte)(st), (st))
 #endif
 
 //////////////////////////////////////////////////////////////////////
