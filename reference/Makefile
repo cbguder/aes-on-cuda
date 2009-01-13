@@ -1,3 +1,5 @@
+all: aes
+
 aes: AES.o main.o
 	$(CXX) -o aes $^
 
