@@ -2,6 +2,7 @@
 #define AES_H
 
 typedef unsigned char byte;
+typedef unsigned int  uint;
 
 uint stringToByteArray(char *str, uint **array);
 void printHexArray(uint *array, uint size);
