@@ -77,9 +77,9 @@ typedef unsigned long   uint;   /* assuming sizeof(uint) == 4 */
 #define MAXKB   (AES_MAXKEYBITS/8)
 #define MAXNR   14
 
-__global__ void AES_encrypt(const uint *pt, uint *ct, uint *rek, uint Nr, uint *Te0, uint *Te1, uint *Te2, uint *Te3, uint *Te4);
+__global__ void AES_encrypt(const uint *pt, uint *ct, uint *rek, uint Nr);
 
-__global__ void AES_decrypt(const uint *ct, uint *pt, uint *rdk, uint Nr, uint *Td0, uint *Td1, uint *Td2, uint *Td3, uint *Td4);
+__global__ void AES_decrypt(const uint *ct, uint *pt, uint *rdk, uint Nr);
 
 class AES: public BlockCipher {
 
@@ -131,6 +131,8 @@ public:
     void encrypt(const uint *pt, uint *ct);
 
     void decrypt(const uint *ct, uint *pt);
+
+    void encrypt_ecb(const uint *pt, uint *ct, uint n);
 
 private:
 

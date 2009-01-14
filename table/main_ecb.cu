@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 	}
 
 	byte *key;
-	uint ct[4], *pt;
+	uint *ct, *pt;
 	uint keySize = stringToByteArray(argv[1], &key);
 	uint ptSize  = stringToByteArray(argv[2], &pt);
 
@@ -23,16 +23,18 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	if(ptSize != 4) {
-		printf("Invalid AES block size.\n");
+	if(ptSize % 4 != 0) {
+		printf("Plaintext size must be a multiple of AES block size.\n");
 		return 1;
 	}
 
+	ct = (uint *)malloc(ptSize*sizeof(uint));
+
 	AES *aes = new AES();
 	aes->makeKey(key, keySize << 3, DIR_ENCRYPT);
-	aes->encrypt(pt, ct);
+	aes->encrypt_ecb(pt, ct, ptSize >> 2);
 
-	printHexArray(ct, 4);
+	printHexArray(ct, ptSize);
 
 	return 0;
 }
