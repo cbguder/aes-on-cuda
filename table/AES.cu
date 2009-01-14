@@ -43,12 +43,17 @@
 //////////////////////////////////////////////////////////////////////
 
 AES::AES() {
+    cudaMalloc((void**)&ce_sched, sizeof(e_sched));
+    cudaMalloc((void**)&cd_sched, sizeof(d_sched));
 }
 
 AES::~AES() {
     Nr = 0;
     memset(e_sched, 0, sizeof(e_sched));
     memset(d_sched, 0, sizeof(d_sched));
+
+    cudaFree(ce_sched);
+    cudaFree(cd_sched);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -212,17 +217,38 @@ void AES::makeKey(const byte *cipherKey, uint keySize, uint dir) {
     default:
         throw "Invalid AES key size";
     }
-    assert(dir >= DIR_NONE && dir <= DIR_BOTH);
+    // assert(dir >= DIR_NONE && dir <= DIR_BOTH);
+    assert(dir <= DIR_BOTH);
     if (dir != DIR_NONE) {
         ExpandKey(cipherKey, keySize);
+        cudaMemcpy(ce_sched, e_sched, sizeof(e_sched), cudaMemcpyHostToDevice);
         if (dir & DIR_DECRYPT) {
             InvertKey();
+            cudaMemcpy(cd_sched, d_sched, sizeof(e_sched), cudaMemcpyHostToDevice);
         }
     }
 }
 
 void AES::encrypt(const uint *pt, uint *ct) {
-    uint *rek = e_sched;
+	uint *cpt, *cct;
+	uint size = 4*sizeof(uint);
+
+	cudaMalloc((void**)&cpt, size);
+	cudaMalloc((void**)&cct, size);
+	cudaMemcpy(cpt, pt, size, cudaMemcpyHostToDevice);
+	
+	AES_encrypt<<<1,1>>>(cpt, cct, ce_sched, Nr, cTe0, cTe1, cTe2, cTe3, cTe4);
+
+	cudaMemcpy(ct, cct, size, cudaMemcpyDeviceToHost);
+	
+	cudaFree(cpt);
+	cudaFree(cct);
+}
+
+void AES::decrypt(const uint *ct, uint *pt) {
+}
+
+__global__ void AES_encrypt(const uint *pt, uint *ct, uint *rek, uint Nr, uint *Te0, uint *Te1, uint *Te2, uint *Te3, uint *Te4) {
     uint s0, s1, s2, s3, t0, t1, t2, t3;
     /*
      * map byte array block to cipher state
@@ -232,7 +258,7 @@ void AES::encrypt(const uint *pt, uint *ct) {
     s1 = pt[1] ^ rek[1];
     s2 = pt[2] ^ rek[2];
     s3 = pt[3] ^ rek[3];
-#ifdef FULL_UNROLL
+
     /* round 1: */
     t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >>  8) & 0xff] ^ Te3[s3 & 0xff] ^ rek[ 4];
     t1 = Te0[s1 >> 24] ^ Te1[(s2 >> 16) & 0xff] ^ Te2[(s3 >>  8) & 0xff] ^ Te3[s0 & 0xff] ^ rek[ 5];
@@ -303,66 +329,7 @@ void AES::encrypt(const uint *pt, uint *ct) {
         }
     }
     rek += Nr << 2;
-#else  /* !FULL_UNROLL */
-    /*
-     * Nr - 1 full rounds:
-     */
-    uint r = Nr >> 1;
-    for (;;) {
-        t0 =
-            Te0[(s0 >> 24)       ] ^
-            Te1[(s1 >> 16) & 0xff] ^
-            Te2[(s2 >>  8) & 0xff] ^
-            Te3[(s3      ) & 0xff] ^
-            rek[4];
-        t1 =
-            Te0[(s1 >> 24)       ] ^
-            Te1[(s2 >> 16) & 0xff] ^
-            Te2[(s3 >>  8) & 0xff] ^
-            Te3[(s0      ) & 0xff] ^
-            rek[5];
-        t2 =
-            Te0[(s2 >> 24)       ] ^
-            Te1[(s3 >> 16) & 0xff] ^
-            Te2[(s0 >>  8) & 0xff] ^
-            Te3[(s1      ) & 0xff] ^
-            rek[6];
-        t3 =
-            Te0[(s3 >> 24)       ] ^
-            Te1[(s0 >> 16) & 0xff] ^
-            Te2[(s1 >>  8) & 0xff] ^
-            Te3[(s2      ) & 0xff] ^
-            rek[7];
-        rek += 8;
-        if (--r == 0) {
-            break;
-        }
-        s0 =
-            Te0[(t0 >> 24)       ] ^
-            Te1[(t1 >> 16) & 0xff] ^
-            Te2[(t2 >>  8) & 0xff] ^
-            Te3[(t3      ) & 0xff] ^
-            rek[0];
-        s1 =
-            Te0[(t1 >> 24)       ] ^
-            Te1[(t2 >> 16) & 0xff] ^
-            Te2[(t3 >>  8) & 0xff] ^
-            Te3[(t0      ) & 0xff] ^
-            rek[1];
-        s2 =
-            Te0[(t2 >> 24)       ] ^
-            Te1[(t3 >> 16) & 0xff] ^
-            Te2[(t0 >>  8) & 0xff] ^
-            Te3[(t1      ) & 0xff] ^
-            rek[2];
-        s3 =
-            Te0[(t3 >> 24)       ] ^
-            Te1[(t0 >> 16) & 0xff] ^
-            Te2[(t1 >>  8) & 0xff] ^
-            Te3[(t2      ) & 0xff] ^
-            rek[3];
-    }
-#endif /* ?FULL_UNROLL */
+
     /*
      * apply last round and
      * map cipher state to byte array block:
@@ -393,8 +360,7 @@ void AES::encrypt(const uint *pt, uint *ct) {
         rek[3];
 }
 
-void AES::decrypt(const uint *ct, uint *pt) {
-    uint *rdk = d_sched;
+__global__ void AES_decrypt(const uint *ct, uint *pt, uint *rdk, uint Nr, uint *Td0, uint *Td1, uint *Td2, uint *Td3, uint *Td4) {
     uint s0, s1, s2, s3, t0, t1, t2, t3;
     /*
      * map byte array block to cipher state
@@ -404,7 +370,7 @@ void AES::decrypt(const uint *ct, uint *pt) {
     s1 = ct[1] ^ rdk[1];
     s2 = ct[2] ^ rdk[2];
     s3 = ct[3] ^ rdk[3];
-#ifdef FULL_UNROLL
+
     /* round 1: */
     t0 = Td0[s0 >> 24] ^ Td1[(s3 >> 16) & 0xff] ^ Td2[(s2 >>  8) & 0xff] ^ Td3[s1 & 0xff] ^ rdk[ 4];
     t1 = Td0[s1 >> 24] ^ Td1[(s0 >> 16) & 0xff] ^ Td2[(s3 >>  8) & 0xff] ^ Td3[s2 & 0xff] ^ rdk[ 5];
@@ -475,66 +441,7 @@ void AES::decrypt(const uint *ct, uint *pt) {
         }
     }
     rdk += Nr << 2;
-#else  /* !FULL_UNROLL */
-    /*
-     * Nr - 1 full rounds:
-     */
-    uint r = Nr >> 1;
-    for (;;) {
-        t0 =
-            Td0[(s0 >> 24)       ] ^
-            Td1[(s3 >> 16) & 0xff] ^
-            Td2[(s2 >>  8) & 0xff] ^
-            Td3[(s1      ) & 0xff] ^
-            rdk[4];
-        t1 =
-            Td0[(s1 >> 24)       ] ^
-            Td1[(s0 >> 16) & 0xff] ^
-            Td2[(s3 >>  8) & 0xff] ^
-            Td3[(s2      ) & 0xff] ^
-            rdk[5];
-        t2 =
-            Td0[(s2 >> 24)       ] ^
-            Td1[(s1 >> 16) & 0xff] ^
-            Td2[(s0 >>  8) & 0xff] ^
-            Td3[(s3      ) & 0xff] ^
-            rdk[6];
-        t3 =
-            Td0[(s3 >> 24)       ] ^
-            Td1[(s2 >> 16) & 0xff] ^
-            Td2[(s1 >>  8) & 0xff] ^
-            Td3[(s0      ) & 0xff] ^
-            rdk[7];
-        rdk += 8;
-        if (--r == 0) {
-            break;
-        }
-        s0 =
-            Td0[(t0 >> 24)       ] ^
-            Td1[(t3 >> 16) & 0xff] ^
-            Td2[(t2 >>  8) & 0xff] ^
-            Td3[(t1      ) & 0xff] ^
-            rdk[0];
-        s1 =
-            Td0[(t1 >> 24)       ] ^
-            Td1[(t0 >> 16) & 0xff] ^
-            Td2[(t3 >>  8) & 0xff] ^
-            Td3[(t2      ) & 0xff] ^
-            rdk[1];
-        s2 =
-            Td0[(t2 >> 24)       ] ^
-            Td1[(t1 >> 16) & 0xff] ^
-            Td2[(t0 >>  8) & 0xff] ^
-            Td3[(t3      ) & 0xff] ^
-            rdk[2];
-        s3 =
-            Td0[(t3 >> 24)       ] ^
-            Td1[(t2 >> 16) & 0xff] ^
-            Td2[(t1 >>  8) & 0xff] ^
-            Td3[(t0      ) & 0xff] ^
-            rdk[3];
-    }
-#endif /* ?FULL_UNROLL */
+
     /*
      * apply last round and
      * map cipher state to byte array block:

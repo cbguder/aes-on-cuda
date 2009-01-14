@@ -77,6 +77,10 @@ typedef unsigned long   uint;   /* assuming sizeof(uint) == 4 */
 #define MAXKB   (AES_MAXKEYBITS/8)
 #define MAXNR   14
 
+__global__ void AES_encrypt(const uint *pt, uint *ct, uint *rek, uint Nr, uint *Te0, uint *Te1, uint *Te2, uint *Te3, uint *Te4);
+
+__global__ void AES_decrypt(const uint *ct, uint *pt, uint *rdk, uint Nr, uint *Td0, uint *Td1, uint *Td2, uint *Td3, uint *Td4);
+
 class AES: public BlockCipher {
 
 public:
@@ -136,7 +140,10 @@ private:
     uint Nr;
     uint e_sched[4*(MAXNR + 1)];
     uint d_sched[4*(MAXNR + 1)];
+
+	// Pointers to GPU key schedules
+	uint *ce_sched;
+	uint *cd_sched;
 };
 
 #endif /* __AES_H */
-
