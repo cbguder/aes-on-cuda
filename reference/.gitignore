@@ -1,5 +1,8 @@
 aes
 aes_ecb
+benchmark
 AES.o
+benchmark.o
 main.o
+main_benchmark.o
 main_ecb.o
