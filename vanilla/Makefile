@@ -1,10 +1,14 @@
 NVCC=nvcc
-NVCCARGS=
 
-all: aes
+EXECUTABLES=aes benchmark
+
+all: $(EXECUTABLES)
 
 aes: AES.cu AES.h
-	$(NVCC) $(NVCCARGS) -o $@ $<
+	$(NVCC) -o $@ $<
+
+benchmark: benchmark.cu AES.h
+	$(NVCC) -o $@ $<
 
 clean:
-	$(RM) aes
+	$(RM) $(EXECUTABLES)
