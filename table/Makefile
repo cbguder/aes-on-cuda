@@ -13,10 +13,10 @@ aes_ecb: AES.o main_ecb.o
 benchmark: AES_benchmark.o benchmark.o
 	$(NVCC) -o $@ $^
 
-AES.o: AES.cu AES.h BlockCipher.h
+AES.o: AES.cu AES.h AES.tab BlockCipher.h
 	$(NVCC) -c -o $@ $<
 
-AES_benchmark.o: AES_benchmark.cu AES.h BlockCipher.h
+AES_benchmark.o: AES_benchmark.cu AES.h AES.tab BlockCipher.h
 	$(NVCC) -c -o $@ $<
 
 main.o: main.cu main.h
