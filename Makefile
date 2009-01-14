@@ -1,4 +1,4 @@
-DIRS = reference util vanilla
+DIRS = reference table util vanilla
 
 all:
 	@for d in $(DIRS); do (cd $$d; $(MAKE) $(MFLAGS) all); done
