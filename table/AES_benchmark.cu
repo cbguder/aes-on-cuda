@@ -23,6 +23,8 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "AES.h"
 #include "AES.tab"
@@ -265,7 +267,11 @@ void AES::encrypt_ecb(const uint *pt, uint *ct, uint n = 1) {
 	dim3 dimBlock(threads, 1, 1);
 	dim3 dimGrid(blocks, 1, 1);
 
+	clock_t start = clock();
 	AES_encrypt<<<dimGrid, dimBlock>>>(cpt, cct, ce_sched, Nr);
+	clock_t end = clock();
+
+	printf("Only encryption takes %d/%d seconds.\n", end-start, CLOCKS_PER_SEC);
 
 	cudaMemcpy(ct, cct, size, cudaMemcpyDeviceToHost);
 	
