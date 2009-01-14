@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 	clock_t end = clock();
 	
 	printf("%d blocks encrypted in %d/%d seconds.\n", ptSize >> 2, end-start, CLOCKS_PER_SEC);
-
+	
 	return 0;
 }
 

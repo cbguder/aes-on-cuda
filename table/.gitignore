@@ -1,8 +1,14 @@
 aes
 aes_ecb
 benchmark
+benchmark_con
+benchmark_cpb
+benchmark_con_cpb
 AES.o
 AES_benchmark.o
+AES_benchmark_con.o
+AES_benchmark_con_cpb.o
+AES_benchmark_cpb.o
 benchmark.o
 main.o
 main_ecb.o

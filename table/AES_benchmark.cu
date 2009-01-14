@@ -273,10 +273,12 @@ void AES::encrypt_ecb(const uint *pt, uint *ct, uint n = 1) {
 
 	printf("Encryption alone takes %d/%d seconds.\n", end-start, CLOCKS_PER_SEC);
 
+#ifndef NO_COPYBACK
 	cudaMemcpy(ct, cct, size, cudaMemcpyDeviceToHost);
 	
 	cudaFree(cpt);
 	cudaFree(cct);
+#endif
 }
 
 void AES::decrypt(const uint *ct, uint *pt) {
