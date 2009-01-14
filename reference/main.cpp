@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 	}
 
 	byte *key;
-	uint ct[16], *pt;
+	uint ct[4], *pt;
 	uint keySize = stringToByteArray(argv[1], &key);
 	uint ptSize  = stringToByteArray(argv[2], &pt);
 
