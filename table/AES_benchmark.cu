@@ -271,7 +271,7 @@ void AES::encrypt_ecb(const uint *pt, uint *ct, uint n = 1) {
 	AES_encrypt<<<dimGrid, dimBlock>>>(cpt, cct, ce_sched, Nr);
 	clock_t end = clock();
 
-	printf("Only encryption takes %d/%d seconds.\n", end-start, CLOCKS_PER_SEC);
+	printf("Encryption alone takes %d/%d seconds.\n", end-start, CLOCKS_PER_SEC);
 
 	cudaMemcpy(ct, cct, size, cudaMemcpyDeviceToHost);
 	
