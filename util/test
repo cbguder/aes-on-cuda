@@ -24,7 +24,6 @@ def main(impl, file):
 	print("%d/%d TESTS PASSED" % (passed, tested))
 
 def aes(impl, key, pt):
-	impl = os.path.join(impl, 'aes')
 	return Popen([impl, key, pt], stdout=PIPE).communicate()[0].strip()
 
 if __name__ == '__main__':
