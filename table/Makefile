@@ -24,7 +24,7 @@ benchmark_cpb: AES_benchmark_cpb.o benchmark.o
 benchmark_con_cpb: AES_benchmark_con_cpb.o benchmark.o
 	$(NVCC) -o $@ $^
 
-AES.o: AES.cu AES.h AES.tab BlockCipher.h
+AES.o: $(AES_FILES)
 	$(NVCC) -c -o $@ $<
 
 AES_benchmark.o: $(AES_FILES)
