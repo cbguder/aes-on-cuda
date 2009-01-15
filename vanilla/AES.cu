@@ -5,52 +5,23 @@
 
 const uint size = 4*4*sizeof(uint);
 
-int main(int argc, char **argv) {
-	if(argc < 3) {
-		printf("USAGE: aes KEY PLAINTEXT\n");
-		return 1;
-	}
-
-	uint ct[16], *key, *pt;
-	uint keySize = stringToByteArray(argv[1], &key);
-	uint ptSize  = stringToByteArray(argv[2], &pt);
-
-	if(keySize != 16 && keySize != 24 && keySize != 32) {
-		printf("Invalid AES key size.\n");
-		return 1;
-	}
-
-	if(ptSize != 16) {
-		printf("Invalid AES block size.\n");
-		return 1;
-	}
-
-	aes_encrypt(pt, key, ct, keySize << 3);
-
-	printHexArray(ct, 16);
-
-	return EXIT_SUCCESS;
-}
-
-uint stringToByteArray(char *str, uint **array) {
-	uint i, len  = strlen(str) >> 1;
-	*array = (uint *)malloc(len * sizeof(uint));
-	
-	for(i=0; i<len; i++)
-		sscanf(str + i*2, "%02X", *array+i);
-
-	return len;
-}
-
-void printHexArray(uint *array, uint size) {
+void aes_encrypt_core(uint *cp, uint *cW, uint Nr) {
 	uint i;
-	for(i=0; i<size; i++)
-		printf("%02X", array[i]);
-	printf("\n");
+	
+	AddRoundKey<<<1,16>>>(cp, cW);
+	for(i=1; i<Nr; i++) {
+		SubBytes<<<1,16>>>(cp);
+		ShiftRows<<<1,4>>>(cp);
+		MixColumns<<<1,4>>>(cp);
+		AddRoundKey<<<1,16>>>(cp, cW+(i << 4));
+	}
+	SubBytes<<<1,16>>>(cp);
+	ShiftRows<<<1,4>>>(cp);
+	AddRoundKey<<<1,16>>>(cp, cW+(i << 4));
 }
 
 void aes_encrypt(uint *pt, uint *key, uint *ct, uint keysize) {
-	uint i, *cp, *W, *cW, Nk, Nr;
+	uint *cp, *W, *cW, Nk, Nr;
 	Nk = keysize >> 5;
 	Nr = Nk + 6;
 
@@ -63,18 +34,34 @@ void aes_encrypt(uint *pt, uint *key, uint *ct, uint keysize) {
 	cudaMalloc((void**)&cp, size);
 	cudaMemcpy(cp, pt, size, cudaMemcpyHostToDevice);
 
-	AddRoundKey<<<1,16>>>(cp, cW);
-	for(i=1; i<Nr; i++) {
-		SubBytes<<<1,16>>>(cp);
-		ShiftRows<<<1,4>>>(cp);
-		MixColumns<<<1,4>>>(cp);
-		AddRoundKey<<<1,16>>>(cp, cW+(i << 4));
-	}
-	SubBytes<<<1,16>>>(cp);
-	ShiftRows<<<1,4>>>(cp);
-	AddRoundKey<<<1,16>>>(cp, cW+(i << 4));
+	aes_encrypt_core(cp, cW, Nr);
 
 	cudaMemcpy(ct, cp, size, cudaMemcpyDeviceToHost);
+}
+
+void aes_encrypt_ecb(uint *pt, uint *key, uint *ct, uint keysize, uint n) {
+	uint i, totalSize = n*size;
+
+	uint *cp, *W, *cW, Nk, Nr;
+	Nk = keysize >> 5;
+	Nr = Nk + 6;
+
+	uint s = ((Nr+1) * sizeof(uint)) << 4;
+	W = (uint *)malloc(s);
+	cudaMalloc((void**)&cW, s);
+	ExpandKeys(key, keysize, W, Nk, Nr);
+	cudaMemcpy(cW, W, s, cudaMemcpyHostToDevice);
+
+	cudaMalloc((void**)&cp, totalSize);
+	cudaMemcpy(cp, pt, totalSize, cudaMemcpyHostToDevice);
+	
+	for(i = 0; i < n; i++) {
+		aes_encrypt_core(cp + (i << 4), cW, Nr);
+	}
+
+#ifndef NO_COPYBACK
+	cudaMemcpy(ct, cp, totalSize, cudaMemcpyDeviceToHost);
+#endif
 }
 
 void ExpandKeys(uint *key, uint keysize, uint *W, uint Nk, uint Nr) {

@@ -4,9 +4,9 @@
 typedef unsigned char byte;
 typedef unsigned int  uint;
 
-uint stringToByteArray(char *str, uint **array);
-void printHexArray(uint *array, uint size);
+void aes_encrypt_core(uint *cp, uint *cW, uint Nr);
 void aes_encrypt(uint *pt, uint *key, uint *ct, uint keysize);
+void aes_encrypt_ecb(uint *pt, uint *key, uint *ct, uint keysize, uint n);
 void ExpandKeys(uint *key, uint keysize, uint *W, uint Nk, uint Nr);
 
 __global__ void SubBytes(uint *state);
