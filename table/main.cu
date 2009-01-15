@@ -9,7 +9,7 @@ using namespace std;
 
 int main(int argc, char **argv) {
 	if(argc < 3) {
-		printf("USAGE: aes KEY PLAINTEXT [PLAINTEXT...]\n");
+		printf("USAGE: aes KEY PLAINTEXT\n");
 		return 1;
 	}
 
