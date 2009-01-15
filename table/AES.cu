@@ -24,6 +24,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef BENCHMARK
+#include <stdio.h>
+#include <time.h>
+#endif
+
 #include "AES.h"
 #include "AES.tab"
 
@@ -265,12 +270,21 @@ void AES::encrypt_ecb(const uint *pt, uint *ct, uint n = 1) {
 	dim3 dimBlock(threads, 1, 1);
 	dim3 dimGrid(blocks, 1, 1);
 
+#ifdef BENCHMARK
+	clock_t start = clock();
 	AES_encrypt<<<dimGrid, dimBlock>>>(cpt, cct, ce_sched, Nr);
+	clock_t end = clock();
+	printf("Encryption alone takes %d/%d seconds.\n", end-start, CLOCKS_PER_SEC);
+#else
+	AES_encrypt<<<dimGrid, dimBlock>>>(cpt, cct, ce_sched, Nr);
+#endif
 
+#ifndef NO_COPYBACK
 	cudaMemcpy(ct, cct, size, cudaMemcpyDeviceToHost);
 	
 	cudaFree(cpt);
 	cudaFree(cct);
+#endif
 }
 
 void AES::decrypt(const uint *ct, uint *pt) {
