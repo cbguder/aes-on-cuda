@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
+import re
 import sys
 
 encryption = []
 total      = []
 
-prefixes = [ 'Encryption alone takes ', '4194304 blocks encrypted in ' ]
+prefixes = [ 'Encryption alone takes ([0-9]+)/[0-9]+ seconds.', '[0-9]+ blocks encrypted in ([0-9]+)/[0-9]+ seconds.' ]
 
 for line in sys.stdin:
 	for i, p in enumerate(prefixes):
-		if line.startswith(p):
-			parts = line.split('/')
-			time = parts[0][len(p):]
+		m = re.match(p, line)
+		if m:
+			time = m.group(1)
 			if i == 0:
 				encryption.append(time)
 			else:
