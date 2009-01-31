@@ -287,6 +287,41 @@ void AES::encrypt_ecb(const uint *pt, uint *ct, uint n = 1) {
 #endif
 }
 
+void AES::encrypt_ecb_async(const uint *pt, uint *ct, uint n = 1) {
+	uint *cpt, *cct;
+	uint i, size = (n << 2)*sizeof(uint);
+	uint halfSize = size >> 1;
+
+	cudaMalloc((void**)&cpt, size);
+	cudaMalloc((void**)&cct, size);
+
+	cudaStream_t stream[2];
+
+    struct cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+
+	uint blocks, threads = 1;
+	if(n != 1) {
+		threads = (n < prop.maxThreadsPerBlock*2) ? n / 2 : prop.maxThreadsPerBlock;
+	}
+	blocks = n / threads;
+
+	dim3 dimBlock(threads, 1, 1);
+	dim3 dimGrid(blocks, 1, 1);
+
+	for(i = 0; i < 2; i++) {
+		int offset = i*halfSize;
+		cudaStreamCreate(&stream[i]);
+		cudaMemcpyAsync(cpt + i*offset, pt + i*offset, halfSize, cudaMemcpyHostToDevice, stream[i]);
+		AES_encrypt<<<dimGrid, dimBlock, stream[i]>>>(cpt + i*offset, cct + i*offset, ce_sched, Nr);
+		cudaMemcpyAsync(ct + offset, cct + offset, halfSize, cudaMemcpyDeviceToHost, stream[i]);
+	}
+	cudaThreadSynchronize();
+
+	cudaFree(cpt);
+	cudaFree(cct);
+}
+
 void AES::decrypt(const uint *ct, uint *pt) {
 }
 

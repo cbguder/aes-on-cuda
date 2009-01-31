@@ -134,6 +134,8 @@ public:
 
     void encrypt_ecb(const uint *pt, uint *ct, uint n);
 
+    void encrypt_ecb_async(const uint *pt, uint *ct, uint n);
+
 private:
 
     // static void Initialize();
