@@ -1,7 +1,7 @@
 NVCC=nvcc
 
-EXECUTABLES=aes aes_ecb benchmark benchmark_con benchmark_cpb benchmark_con_cpb
-OBJECTS=AES.o AES_benchmark.o AES_benchmark_con.o AES_benchmark_con_cpb.o AES_benchmark_cpb.o benchmark.o main.o main_ecb.o
+EXECUTABLES=aes aes_ecb benchmark benchmark_async benchmark_con benchmark_cpb benchmark_con_cpb
+OBJECTS=AES.o AES_benchmark.o AES_benchmark_con.o AES_benchmark_con_cpb.o AES_benchmark_cpb.o benchmark.o benchmark_async.o main.o main_ecb.o
 AES_FILES=AES.cu AES.h AES.tab BlockCipher.h
 
 all: $(EXECUTABLES)
@@ -13,6 +13,9 @@ aes_ecb: AES.o main_ecb.o
 	$(NVCC) -o $@ $^
 
 benchmark: AES_benchmark.o benchmark.o
+	$(NVCC) -o $@ $^
+
+benchmark_async: AES_benchmark.o benchmark_async.o
 	$(NVCC) -o $@ $^
 
 benchmark_con: AES_benchmark_con.o benchmark.o
@@ -47,6 +50,9 @@ main_ecb.o: main_ecb.cu main.h
 
 benchmark.o: benchmark.cu main.h
 	$(NVCC) -c -o $@ $<
+
+benchmark_async.o: benchmark.cu main.h
+	$(NVCC) -DASYNC -c -o $@ $<
 
 clean:
 	$(RM) $(EXECUTABLES) $(OBJECTS)

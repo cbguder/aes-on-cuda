@@ -35,22 +35,33 @@ int main(int argc, char **argv) {
 	}
 
 	uint ptSize = f_size / sizeof(uint);
-	
+
+#ifdef ASYNC
+	cudaMallocHost((void**)&pt, f_size);
+	cudaMallocHost((void**)&ct, f_size);
+#else
 	pt = (uint*)malloc(f_size);
+	ct = (uint *)malloc(f_size);
+#endif
+
 	fread(pt, sizeof(uint), ptSize, f);
 	fclose(f);
-
-	ct = (uint *)malloc(ptSize*sizeof(uint));
 
 	AES *aes = new AES();
 	aes->makeKey(key, keySize << 3, DIR_ENCRYPT);
 
 	clock_t start = clock();
+
+#ifdef ASYNC
+	aes->encrypt_ecb_async(pt, ct, ptSize >> 2);
+#else
 	aes->encrypt_ecb(pt, ct, ptSize >> 2);
+#endif
+
 	clock_t end = clock();
-	
+
 	printf("%d blocks encrypted in %d/%d seconds.\n", ptSize >> 2, end-start, CLOCKS_PER_SEC);
-	
+
 	return 0;
 }
 

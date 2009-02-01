@@ -287,35 +287,47 @@ void AES::encrypt_ecb(const uint *pt, uint *ct, uint n = 1) {
 #endif
 }
 
+#define STREAMS 8
+
 void AES::encrypt_ecb_async(const uint *pt, uint *ct, uint n = 1) {
 	uint *cpt, *cct;
 	uint i, size = (n << 2)*sizeof(uint);
-	uint halfSize = size >> 1;
+	uint streamSize = size / STREAMS;
+	uint streamMem  = (n << 2) / STREAMS;
 
 	cudaMalloc((void**)&cpt, size);
 	cudaMalloc((void**)&cct, size);
 
-	cudaStream_t stream[2];
+	cudaStream_t stream[STREAMS];
 
     struct cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, 0);
 
-	uint blocks, threads = 1;
+	uint threads = 1;
 	if(n != 1) {
 		threads = (n < prop.maxThreadsPerBlock*2) ? n / 2 : prop.maxThreadsPerBlock;
 	}
-	blocks = n / threads;
+	uint blocks = (n/STREAMS) / threads;
 
 	dim3 dimBlock(threads, 1, 1);
 	dim3 dimGrid(blocks, 1, 1);
 
-	for(i = 0; i < 2; i++) {
-		int offset = i*halfSize;
+	for(i = 0; i < STREAMS; i++) {
 		cudaStreamCreate(&stream[i]);
-		cudaMemcpyAsync(cpt + i*offset, pt + i*offset, halfSize, cudaMemcpyHostToDevice, stream[i]);
-		AES_encrypt<<<dimGrid, dimBlock, stream[i]>>>(cpt + i*offset, cct + i*offset, ce_sched, Nr);
-		cudaMemcpyAsync(ct + offset, cct + offset, halfSize, cudaMemcpyDeviceToHost, stream[i]);
 	}
+	for(i = 0; i < STREAMS; i++) {
+		uint offset = i*streamMem;
+		cudaError_t r = cudaMemcpyAsync(cpt + offset, pt + offset, streamSize, cudaMemcpyHostToDevice, stream[i]);
+	}
+	for(i = 0; i < STREAMS; i++) {
+		uint offset = i*streamMem;
+		AES_encrypt<<<dimGrid, dimBlock, 0, stream[i]>>>(cpt + offset, cct + offset, ce_sched, Nr);
+	}
+	for(i = 0; i < STREAMS; i++) {
+		uint offset = i*streamMem;
+		cudaError_t r = cudaMemcpyAsync(ct + offset, cct + offset, streamSize, cudaMemcpyDeviceToHost, stream[i]);
+	}
+
 	cudaThreadSynchronize();
 
 	cudaFree(cpt);
